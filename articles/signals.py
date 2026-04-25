@@ -10,7 +10,7 @@ from .models import Article
 import requests
 
 
-# PRE SAVE → store old value
+# PRE SAVE -> store old value
 @receiver(pre_save, sender=Article)
 def store_old_approved(sender, instance, **kwargs):
     if instance.pk:
@@ -21,7 +21,7 @@ def store_old_approved(sender, instance, **kwargs):
             instance._old_approved = False
 
 
-# POST SAVE → react to change
+# POST SAVE -> react to change
 @receiver(post_save, sender=Article)
 def article_approved_signal(sender, instance, created, **kwargs):
     if created:
