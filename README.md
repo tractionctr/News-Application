@@ -70,7 +70,7 @@ News Application/
 
 1. Clone the repo
 
-git clone https://github.com/yourusername/news-application.git
+git clone https://github.com/tractionctr/News-Application.git
 
 cd news-application
 
