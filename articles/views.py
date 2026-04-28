@@ -142,7 +142,7 @@ def edit_newsletter_view(request, pk):
         newsletter.description = request.POST.get('description')
 
         article_ids = request.POST.getlist('articles')
-        newsletter.articles.set(article_ids)   # 👈 THIS is the missing piece
+        newsletter.articles.set(article_ids)
 
         newsletter.save()
         return redirect('newsletter_detail', pk=newsletter.pk)

@@ -128,5 +128,9 @@ EMAIL_USE_TLS = True
 # INTERNAL API
 INTERNAL_API_ENDPOINT = 'http://localhost:8000/api/approved/'
 
+<<<<<<< HEAD
 # OPTIONAL (avoids annoying warnings)
+=======
+# (avoids annoying warnings)
+>>>>>>> 96554d6e392502981c9fc420f5ad91a8014a8b02
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000']

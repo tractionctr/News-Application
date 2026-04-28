@@ -1,5 +1,5 @@
 /* =========================
-   GLOBAL DARK MODE (DEFAULT)
+   GLOBAL DARK MODE
 ========================= */
 
 body {
@@ -70,8 +70,6 @@ a:hover {
     color: #eaeaea;
 }
 
-/* DARK THEME BUTTON (CONSISTENT CONTRAST) */
-
 .btn-outline-secondary {
     color: #eaeaea;
     border-color: #555;
@@ -80,7 +78,7 @@ a:hover {
 
 .btn-outline-secondary:hover {
     background-color: #eaeaea;
-    color: #121212; /* opposite = readable */
+    color: #121212;
     border-color: #eaeaea;
 }
 
@@ -97,7 +95,7 @@ p, span, li {
     color: #eaeaea;
 }
 
-/* SECONDARY TEXT (subtle but visible, not ghost mode) */
+/* SECONDARY TEXT */
 .text-muted {
     color: #b0b0b0 !important;
 }
