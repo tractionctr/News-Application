@@ -8,9 +8,8 @@ from django.contrib.auth.models import AbstractUser, Group
 
 class User(AbstractUser):
     """
-    Custom user model with role-based access.
-    Roles: Reader, Journalist, Editor
-    Each user belongs to exactly one role group.
+    Custom user model supporting role-based access control.
+    Roles: Reader, Journalist, Editor.
     """
     ROLE_CHOICES = (
         ('Reader', 'Reader'),
@@ -55,8 +54,8 @@ class User(AbstractUser):
 
 class Publisher(models.Model):
     """
-    Publisher model representing news organizations.
-    Has many journalists and editors.
+    Represents a news publisher organization.
+    Can have journalists and editors assigned.
     """
     name = models.CharField(max_length=200, unique=True)
     journalists = models.ManyToManyField(
@@ -80,8 +79,8 @@ class Publisher(models.Model):
 
 class Article(models.Model):
     """
-    Article model representing news articles.
-    Must belong to either a journalist (via author) OR a publisher, never both.
+    Represents a news article written by journalists.
+    Can optionally belong to a publisher and be approved by editors.
     """
     title = models.CharField(max_length=300)
     content = models.TextField()
@@ -126,8 +125,7 @@ class Article(models.Model):
 
 class Newsletter(models.Model):
     """
-    Newsletter model for curated article collections.
-    Created by journalists or editors, contains multiple articles.
+    Collection of articles curated by journalists or editors.
     """
     title = models.CharField(max_length=200)
     description = models.TextField()
