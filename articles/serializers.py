@@ -1,16 +1,27 @@
 """
 Serializers for the News Application API.
-Separate serializers for Article, User, Publisher, and Newsletter models.
+
+Handles conversion between Django models and JSON for:
+- Users
+- Publishers
+- Articles
+- Newsletters
 """
+
 from rest_framework import serializers
 from .models import User, Publisher, Article, Newsletter
 
 
 class UserSerializer(serializers.ModelSerializer):
     """
-    Serializer for User model.
-    Handles role-based field exposure.
+    Serializer for the User model.
+
+    Exposes user profile data including:
+    - role
+    - subscriptions
+    - account metadata
     """
+
     class Meta:
         model = User
         fields = [
@@ -22,20 +33,24 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        Create user with password hashing and role-based group assignment.
+        Creates a new user with properly hashed password.
+
+        Also handles optional subscription relationships.
         """
         password = validated_data.pop('password', None)
         subscriptions_publishers = validated_data.pop('subscriptions_publishers', [])
         subscriptions_journalists = validated_data.pop('subscriptions_journalists', [])
 
         user = User(**validated_data)
+
         if password:
             user.set_password(password)
+
         user.save()
 
-        # Handle many-to-many fields
         if subscriptions_publishers:
             user.subscriptions_publishers.set(subscriptions_publishers)
+
         if subscriptions_journalists:
             user.subscriptions_journalists.set(subscriptions_journalists)
 
@@ -45,7 +60,10 @@ class UserSerializer(serializers.ModelSerializer):
 class PublisherSerializer(serializers.ModelSerializer):
     """
     Serializer for Publisher model.
+
+    Includes computed field for journalist count.
     """
+
     journalist_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -54,14 +72,20 @@ class PublisherSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def get_journalist_count(self, obj):
+        """
+        Returns number of journalists linked to this publisher.
+        """
         return obj.journalists.count()
 
 
 class ArticleSerializer(serializers.ModelSerializer):
     """
-    Serializer for Article model.
-    Includes author and publisher details.
+    Full serializer for Article model.
+
+    Used for create/update operations.
+    Includes author and publisher metadata.
     """
+
     author_name = serializers.CharField(source='author.username', read_only=True)
     publisher_name = serializers.CharField(source='publisher.name', read_only=True, allow_null=True)
 
@@ -75,8 +99,9 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        Create article with author set to requesting journalist.
-        Articles start as unapproved (approved=False).
+        Creates a new article.
+
+        Articles are always created as unapproved by default.
         """
         validated_data['approved'] = False
         return super().create(validated_data)
@@ -84,8 +109,11 @@ class ArticleSerializer(serializers.ModelSerializer):
 
 class ArticleListSerializer(serializers.ModelSerializer):
     """
-    Lightweight serializer for article list views.
+    Lightweight serializer for article listings.
+
+    Used for list views where full content is unnecessary.
     """
+
     author_name = serializers.CharField(source='author.username', read_only=True)
     publisher_name = serializers.CharField(source='publisher.name', read_only=True, allow_null=True)
 
@@ -97,7 +125,10 @@ class ArticleListSerializer(serializers.ModelSerializer):
 class NewsletterSerializer(serializers.ModelSerializer):
     """
     Serializer for Newsletter model.
+
+    Includes article count summary.
     """
+
     author_name = serializers.CharField(source='author.username', read_only=True)
     article_count = serializers.SerializerMethodField()
 
@@ -110,13 +141,19 @@ class NewsletterSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def get_article_count(self, obj):
+        """
+        Returns number of articles in this newsletter.
+        """
         return obj.articles.count()
 
 
 class NewsletterDetailSerializer(serializers.ModelSerializer):
     """
-    Detailed serializer for Newsletter with nested article data.
+    Detailed newsletter serializer.
+
+    Includes nested article list for full content view.
     """
+
     author_name = serializers.CharField(source='author.username', read_only=True)
     articles = ArticleListSerializer(many=True, read_only=True)
 

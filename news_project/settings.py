@@ -124,6 +124,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = "noreply@newsapp.com"
 
 # INTERNAL API
 INTERNAL_API_ENDPOINT = 'http://localhost:8000/api/approved/'

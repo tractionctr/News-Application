@@ -1,60 +1,87 @@
 """
 Custom permission classes for role-based access control.
-Enforces permissions based on user roles: Reader, Journalist, Editor.
+
+Defines access rules for:
+- Readers (view-only access)
+- Journalists (manage own content)
+- Editors (full content control)
+- Mixed role access combinations
 """
+
 from rest_framework import permissions
 
 
 class IsReader(permissions.BasePermission):
     """
-    Permission class for Reader role.
-    Readers can only view articles and newsletters.
+    Allows access only to users with the Reader role.
+
+    Readers can view content but cannot modify it.
     """
+
     message = "Readers can only view content."
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'Reader'
 
     def has_object_permission(self, request, view, obj):
-        # Readers can only view
+        """
+        Readers are restricted to safe (read-only) operations.
+        """
         return request.method in permissions.SAFE_METHODS
 
 
 class IsJournalist(permissions.BasePermission):
     """
-    Permission class for Journalist role.
-    Journalists can create, update, delete their own articles and newsletters.
+    Allows access only to users with the Journalist role.
+
+    Journalists can create and manage their own content.
     """
+
     message = "Journalists can only manage their own content."
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'Journalist'
 
     def has_object_permission(self, request, view, obj):
-        # Allow safe methods for viewing
+        """
+        Journalists can only modify objects they own.
+        """
         if request.method in permissions.SAFE_METHODS:
             return True
-        # For write operations, check ownership
+
         if hasattr(obj, 'author'):
             return obj.author == request.user
+
         return False
 
 
 class IsEditor(permissions.BasePermission):
+    """
+    Allows access only to users with the Editor role.
+
+    Editors have full permissions over content management.
+    """
+
     message = "Only Editors can perform this action."
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == "Editor"
 
     def has_object_permission(self, request, view, obj):
+        """
+        Editors can access and modify all objects.
+        """
         return True
 
 
 class IsJournalistOrEditor(permissions.BasePermission):
     """
-    Permission class for Journalist or Editor roles.
-    Journalists can manage own content, Editors can manage all content.
+    Allows access to Journalists and Editors.
+
+    - Journalists: limited to their own content
+    - Editors: full access to all content
     """
+
     message = "Only Journalists or Editors can perform this action."
 
     def has_permission(self, request, view):
@@ -64,16 +91,17 @@ class IsJournalistOrEditor(permissions.BasePermission):
         )
 
     def has_object_permission(self, request, view, obj):
-        # Safe methods allowed for both
+        """
+        Journalists can only modify their own content.
+        Editors can modify everything.
+        """
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        # Editors can do anything
         if request.user.role == 'Editor':
             return True
 
-        # Journalists can only modify their own content
-        if hasattr(obj, 'author'):
+        if request.user.role == 'Journalist' and hasattr(obj, 'author'):
             return obj.author == request.user
 
         return False
@@ -81,9 +109,13 @@ class IsJournalistOrEditor(permissions.BasePermission):
 
 class IsReaderOrJournalistOrEditor(permissions.BasePermission):
     """
-    Allow access to Readers, Journalists, and Editors.
-    Readers can view only, Journalists/Editors have more permissions.
+    Allows access to all authenticated roles.
+
+    - Readers: read-only
+    - Journalists: own content management
+    - Editors: full access
     """
+
     message = "Authentication required."
 
     def has_permission(self, request, view):
@@ -93,11 +125,12 @@ class IsReaderOrJournalistOrEditor(permissions.BasePermission):
         )
 
     def has_object_permission(self, request, view, obj):
-        # Safe methods for all authenticated users
+        """
+        Enforces role-based object-level access rules.
+        """
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        # Write operations only for Journalists (own) or Editors (any)
         if request.user.role == 'Editor':
             return True
 
@@ -109,8 +142,11 @@ class IsReaderOrJournalistOrEditor(permissions.BasePermission):
 
 class IsAuthenticatedWithRole(permissions.BasePermission):
     """
-    Base permission that checks authentication and valid role.
+    Base permission ensuring user is authenticated and has a valid role.
+
+    Used as a general safety gate across API endpoints.
     """
+
     message = "Authentication required with valid role."
 
     def has_permission(self, request, view):

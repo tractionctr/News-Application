@@ -6,8 +6,14 @@
 <article>
     <h1>{{ article.title }}</h1>
     <p><strong>Author:</strong> {{ article.author.username }}</p>
-    {% if article.publisher %}
-    <p><strong>Publisher:</strong> {{ article.publisher.name }}</p>
+    {% if user.role == 'Reader' %}
+        <a href="{% url 'subscribe_journalist' article.author.pk %}">
+            {% if article.author in user.subscriptions_journalists.all %}
+                Unsubscribe Author
+            {% else %}
+                Subscribe Author
+            {% endif %}
+        </a>
     {% endif %}
     <p><strong>Published:</strong> {{ article.created_at|date:"M d, Y H:i" }}</p>
     <p><strong>Status:</strong> {% if article.approved %}Approved{% else %}Pending Approval{% endif %}</p>
@@ -16,14 +22,15 @@
         {{ article.content|linebreaks }}
     </div>
     {% if article.publisher %}
-<p>
-    <strong>Publisher:</strong>
-    <a href="{% url 'publisher_detail' article.publisher.pk %}">
-        {{ article.publisher.name }}
-    </a>
-</p>
-{% endif %}
+        <p>
+            <strong>Publisher:</strong>
+            <a href="{% url 'publisher_detail' article.publisher.pk %}">
+                {{ article.publisher.name }}
+            </a>
+        </p>
+    {% endif %}
 </article>
+
 <br>
 <a href="{% url 'article_list' %}">Back to Articles</a>
 {% endblock %}

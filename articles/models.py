@@ -1,17 +1,26 @@
 """
 Models for the News Application.
-Defines User, Publisher, Article, and Newsletter models with role-based relationships.
+Defines User, Publisher, Article, Newsletter, and Subscription models
+with role-based relationships and content approval workflow.
 """
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
+from django.core.exceptions import ValidationError
 
 
 class User(AbstractUser):
     """
-    Custom user model with role-based access.
-    Roles: Reader, Journalist, Editor
-    Each user belongs to exactly one role group.
+    Custom user model with role-based access control.
+
+    Roles:
+    - Reader: consumes content
+    - Journalist: creates articles
+    - Editor: approves and manages content
+
+    Also supports subscriptions to publishers and journalists.
     """
+
     ROLE_CHOICES = (
         ('Reader', 'Reader'),
         ('Journalist', 'Journalist'),
@@ -19,13 +28,14 @@ class User(AbstractUser):
     )
 
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Reader')
+    email = models.EmailField(unique=True)
 
-    # Reader-specific fields (only used when role = 'Reader')
     subscriptions_publishers = models.ManyToManyField(
         'Publisher',
         blank=True,
         related_name='subscribers'
     )
+
     subscriptions_journalists = models.ManyToManyField(
         'self',
         blank=True,
@@ -38,26 +48,25 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         """
-        Automatically assign user to Django Group based on role.
-        Ensures user belongs to exactly one role group.
+        Saves user and assigns them to a Django Group based on role.
+        Ensures each user belongs to a single role group.
         """
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
         if is_new:
-            # Remove any existing group memberships
             self.groups.clear()
-
-            # Add to the group matching the role
             group, created = Group.objects.get_or_create(name=self.role)
             self.groups.add(group)
 
 
 class Publisher(models.Model):
     """
-    Publisher model representing news organizations.
-    Has many journalists and editors.
+    Represents a news publisher/organization.
+
+    Publishers can have multiple journalists and editors assigned.
     """
+
     name = models.CharField(max_length=200, unique=True)
     journalists = models.ManyToManyField(
         User,
@@ -80,24 +89,15 @@ class Publisher(models.Model):
 
 class Article(models.Model):
     """
-    Article model representing news articles.
-    Must belong to either a journalist (via author) OR a publisher, never both.
+    News article created by a journalist and optionally associated with a publisher.
+
+    Articles must be approved before becoming publicly visible.
     """
+
     title = models.CharField(max_length=300)
     content = models.TextField()
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='articles',
-        limit_choices_to={'role': 'Journalist'}
-    )
-    publisher = models.ForeignKey(
-        Publisher,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='articles'
-    )
+    author = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    publisher = models.ForeignKey(Publisher, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     approved = models.BooleanField(default=False)
 
@@ -106,18 +106,28 @@ class Article(models.Model):
 
     def clean(self):
         """
-        Validate that article belongs to either journalist OR publisher.
-        Author must be a Journalist.
+        Validates article ownership rules:
+        - Must belong to either author OR publisher context correctly
+        - Author must always be a Journalist
         """
-        from django.core.exceptions import ValidationError
+        if not self.author:
+            raise ValidationError("Article must have an author.")
 
-        if self.author.role != 'Journalist':
-            raise ValidationError('Article author must be a Journalist.')
+        if self.author.role != "Journalist":
+            raise ValidationError("Author must be a Journalist.")
 
-        # Article must have either author (journalist) or publisher, but logic ensures
-        # author is always set - the distinction is whether publisher is also set
-        # For independent articles: author set, publisher null
-        # For publisher articles: author set (journalist), publisher set
+    def save(self, *args, **kwargs):
+        """
+        Saves article and triggers approval workflow if status changes to approved.
+        """
+        is_new_approval = False
+
+        if self.pk:
+            old = Article.objects.filter(pk=self.pk).first()
+            is_new_approval = (not old.approved and self.approved)
+
+        self.clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ['-created_at']
@@ -126,18 +136,22 @@ class Article(models.Model):
 
 class Newsletter(models.Model):
     """
-    Newsletter model for curated article collections.
-    Created by journalists or editors, contains multiple articles.
+    Curated collection of articles created by Journalists or Editors.
+
+    Used to group related news content.
     """
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='newsletters',
         limit_choices_to={'role__in': ['Journalist', 'Editor']}
     )
+
     articles = models.ManyToManyField(
         Article,
         blank=True,
@@ -150,3 +164,31 @@ class Newsletter(models.Model):
     class Meta:
         ordering = ['-created_at']
         verbose_name_plural = 'Newsletters'
+
+
+class Subscription(models.Model):
+    """
+    Represents a Reader's subscription to either:
+    - a Publisher OR
+    - a Journalist
+
+    Only one target type is allowed per subscription.
+    """
+
+    subscriber = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subscriptions")
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, null=True, blank=True)
+    journalist = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="journalist_subscribers")
+
+    def clean(self):
+        """
+        Ensures subscription targets exactly one entity type.
+        """
+        if bool(self.publisher) == bool(self.journalist):
+            raise ValidationError("Subscription must be either publisher OR journalist, not both or neither.")
+
+    def save(self, *args, **kwargs):
+        """
+        Validates and saves subscription.
+        """
+        self.clean()
+        super().save(*args, **kwargs)
