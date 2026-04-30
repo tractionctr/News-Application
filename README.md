@@ -38,44 +38,82 @@ A role-based Django web application where users can read, create, and manage art
 - Django  
 - Django REST Framework  
 - Bootstrap 5  
-- SQLite  
-- HTML / CSS  
+- MySQL  
+- HTML / CSS
 
 ---
 
 ## Setup Instructions
 
-1. Clone the repo
+### 1. Clone the repo
 
+```bash
 git clone https://github.com/tractionctr/News-Application.git
+cd News-Application
+```
 
-cd news-application
+### 2. Create virtual environment
 
+```bash
+python -m venv venv
+```
 
-2. Install dependencies
+Activate it:
 
+**Windows**
+```bash
+venv\Scripts\activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
+### 4. Configure environment variables
 
-3. Run migrations
+Copy `.env.example` to `.env` and update values.
 
+Example:
+
+```bash
+copy .env.example .env
+```
+
+### 5. Create MySQL database
+
+Run this in MySQL:
+
+```sql
+CREATE DATABASE news_application;
+```
+
+Then update DB credentials in `.env`.
+
+### 6. Run migrations
+
+```bash
 python manage.py migrate
+```
 
+### 7. Create superuser (optional)
 
-4. Create superuser (optional but recommended)
-
+```bash
 python manage.py createsuperuser
+```
 
+### 8. Run server
 
-5. Run server
-
+```bash
 python manage.py runserver
+```
 
+### 9. Open in browser
 
-6. Open in browser
-
+```text
 http://127.0.0.1:8000/
-
+```
 
 ---
 
